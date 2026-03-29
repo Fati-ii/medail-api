@@ -40,7 +40,7 @@ L'API utilise les bonnes pratiques de routage REST et valide l'intégrité des d
 - `GET /?tri=points` : Classement pondéré (Or = 3 pts, Argent = 2 pts, Bronze = 1 pt).
 - `GET /pays/{paysId}` : Données et statistiques ciblées d'une délégation en particulier.
 
-## 🚀 Tester l'API avec Postman
+## Tester l'API avec Postman
 
 Une collection Postman a été générée pour vous permettre de tester facilement tous les endpoints de l'API.
 **Fichier :** `Medail_API_Postman_Collection.json` (à la racine du projet)
