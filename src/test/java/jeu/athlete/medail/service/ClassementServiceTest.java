@@ -4,6 +4,7 @@ import jeu.athlete.medail.domain.Medaille;
 import jeu.athlete.medail.domain.Pays;
 import jeu.athlete.medail.domain.TypeMedaille;
 import jeu.athlete.medail.dto.ClassementDTO;
+import jeu.athlete.medail.exception.ResourceNotFoundException;
 import jeu.athlete.medail.repository.PaysRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,9 +15,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class ClassementServiceTest {
@@ -52,7 +54,79 @@ public class ClassementServiceTest {
     }
 
     @Test
-    void testGetClassementTriParOr() {
+    void getClassement_ShouldSortByDefault_WhenTriIsNull() {
+        when(paysRepository.findAll()).thenReturn(Arrays.asList(paysFrance));
+        List<ClassementDTO> res = classementService.getClassement(null);
+        assertNotNull(res);
+    }
+
+    @Test
+    void getClassement_ShouldSortByTotalFull() {
+        // Default case
+        when(paysRepository.findAll()).thenReturn(Arrays.asList(paysFrance));
+        List<ClassementDTO> res = classementService.getClassement("total");
+        assertNotNull(res);
+    }
+
+    @Test
+    void getClassement_ShouldSortByOr() {
+        Pays p2 = new Pays();
+        p2.setId(2L);
+        p2.setNom("USA");
+        Medaille m = new Medaille();
+        m.setType(TypeMedaille.OR);
+        p2.setMedailles(Arrays.asList(m, m)); // 2 Gold for USA
+        
+        when(paysRepository.findAll()).thenReturn(Arrays.asList(paysFrance, p2));
+
+        List<ClassementDTO> res = classementService.getClassement("or");
+        assertEquals("USA", res.get(0).getNomPays());
+    }
+
+    @Test
+    void getClassement_ShouldSortByPoints() {
+        Pays p2 = new Pays();
+        p2.setId(2L);
+        p2.setNom("USA");
+        Medaille m = new Medaille();
+        m.setType(TypeMedaille.ARGENT);
+        p2.setMedailles(Arrays.asList(m, m, m)); // 6 points for USA (3 Silver)
+        
+        Medaille m2 = new Medaille();
+        m2.setType(TypeMedaille.OR);
+        paysFrance.setMedailles(Arrays.asList(m2)); // 3 points for France (1 Gold)
+        
+        when(paysRepository.findAll()).thenReturn(Arrays.asList(paysFrance, p2));
+
+        List<ClassementDTO> res = classementService.getClassement("points");
+        assertEquals("USA", res.get(0).getNomPays());
+    }
+
+    @Test
+    void getClassement_ShouldHandleEmptyMedailles() {
+        paysFrance.setMedailles(null);
+        when(paysRepository.findAll()).thenReturn(Arrays.asList(paysFrance));
+        
+        List<ClassementDTO> res = classementService.getClassement("total");
+        assertEquals(0, res.get(0).getTotal());
+    }
+
+    @Test
+    void getStatsPays_ShouldReturnStats() {
+        when(paysRepository.findById(1L)).thenReturn(Optional.of(paysFrance));
+        
+        ClassementDTO res = classementService.getStatsPays(1L);
+        assertEquals("France", res.getNomPays());
+    }
+
+    @Test
+    void getStatsPays_ShouldThrow_WhenNotFound() {
+        when(paysRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> classementService.getStatsPays(1L));
+    }
+
+    @Test
+    void getClassement_ShouldReturnList() {
         when(paysRepository.findAll()).thenReturn(Arrays.asList(paysFrance, paysUSA));
         
         List<ClassementDTO> result = classementService.getClassement("or");
